@@ -49,6 +49,7 @@ int main(int argc, char** argv) {
     // Here we load mapping information to get cid (channel ID)
     TButility utility = TButility();
     utility.loading("/pnfs/knu.ac.kr/data/cms/store/user/sungwon/2022_DRC_TB_analysis/mapping/mapping_Aug2022TB.root");
+    utility.loadped( ("/pnfs/knu.ac.kr/data/cms/store/user/sungwon/2022_DRC_TB_analysis/ped/mean/Run" + std::to_string(runNum) + "_pedestalHist_mean.root").c_str() );
     //utility.loading("/gatbawi/dream/mapping/mapping_Aug2022TB.root");
 
     // Exercise starts here
@@ -70,12 +71,22 @@ int main(int argc, char** argv) {
     // Exercise 1 : Define cid of both Module 1 Tower 1 Cerenkov channel and Scintillation channel (generic PMT)
     TBcid SiPM_s[200];
     TBcid SiPM_c[200];
+    float S_ped[200];
+    float C_ped[200];
     for (int i =0;i<200;i++){
          SiPM_s[i] = utility.getcid(TBdetector::detid::SiPM,2,5,(i/10+1)%2+i%10*2+21,i/10+21,false);
          SiPM_c[i] = utility.getcid(TBdetector::detid::SiPM,2,5,(i/10)%2+i%10*2+21,i/10+21,true);
-	 std::cout<<(i/10+1)%2+i%10*2+21<<" | "<<i/10+21<<std::endl;
+	 S_ped[i] = utility.retrievePed(SiPM_s[i]);
+	 C_ped[i] = utility.retrievePed(SiPM_c[i]);
+	 //std::cout<<(i/10+1)%2+i%10*2+21<<" | "<<i/10+21<<std::endl;
     }
+    TH1F *FWHM_S[200];
+    TH1F *FWHM_C[200];
+    for (int i=0;i<200;i++){
+	FWHM_S[i] = new TH1F(Form("FWHM_%d_plate_%d_column_S",(i/10+1)%2+i%10*2+21,i/10+21),";bin;evt",1000,0,1000);
+	FWHM_C[i] = new TH1F(Form("FWHM_%d_plate_%d_column_C",(i/10)%2+i%10*2+21,i/10+21),";bin;evt",1000,0,1000);
 
+    }
     // Starting Evt Loop
     for (int iEvt = 0; iEvt < totalEntry; iEvt++) {
         // Get entry from ntuple TChain
@@ -83,12 +94,12 @@ int main(int argc, char** argv) {
         evtChain->GetEntry(iEvt);
 
         // Here we define histograms to draw waveform plots of pre-shower, module 1 tower 1 ceren. and scint. channel
-        TH1F* psWaveformHist = new TH1F( ( "psWaveform_" + std::to_string(iEvt) ).c_str(), ("psWaveform_" + std::to_string(iEvt) + ";bin;ADC").c_str() , 1000, 0, 1000);
-        psWaveformHist->GetYaxis()->SetRangeUser(-100, 4096);
-	TH1F* SiPM_s_hist = new TH1F ("",";bin;ADC",1000,0,1000);
-	SiPM_s_hist->GetYaxis()->SetRangeUser(3000,4000);
-	TH1F* SiPM_c_hist = new TH1F ("",";bin;ADC",1000,0,1000);
-	SiPM_c_hist->GetYaxis()->SetRangeUser(3000,4000);
+        //TH1F* psWaveformHist = new TH1F( ( "psWaveform_" + std::to_string(iEvt) ).c_str(), ("psWaveform_" + std::to_string(iEvt) + ";bin;ADC").c_str() , 1000, 0, 1000);
+        //psWaveformHist->GetYaxis()->SetRangeUser(-100, 4096);
+	//TH1F* SiPM_s_hist = new TH1F ("",";bin;ADC",1000,0,1000);
+	//SiPM_s_hist->GetYaxis()->SetRangeUser(3000,4000);
+	//TH1F* SiPM_c_hist = new TH1F ("",";bin;ADC",1000,0,1000);
+	//SiPM_c_hist->GetYaxis()->SetRangeUser(3000,4000);
         // To get data (TBwaveform class object) from event, one cat use data(TBcid cid) function of TBevt class
         // anEvt->data(TBcid cid) will return TBwaveform class object of corresponding channel ID
         // For example, to get TBwaveform data of pre-shower detector, one cat do :
@@ -111,20 +122,57 @@ int main(int argc, char** argv) {
 	for (int i=0;i<200;i++){
 	    SiPM_s_waveform.clear();
 	    SiPM_c_waveform.clear();
-    	    SiPM_s_hist->Reset();
-    	    SiPM_c_hist->Reset();
+    	    //SiPM_s_hist->Reset();
+    	    //SiPM_c_hist->Reset();
+    	    //std::cout<<"hello"<<std::endl;
 	    SiPM_s_waveform = SiPM_s_data[i].waveform();
     	    SiPM_c_waveform = SiPM_c_data[i].waveform();
-	    for (int bin =0; bin < 1000; bin++){
-            	int waveformBin = bin + 1; // To loop over waveform[1] ~ waveform[1000]
-	 	SiPM_s_hist->Fill(bin,SiPM_s_waveform[waveformBin]);   	
-	 	SiPM_c_hist->Fill(bin,SiPM_c_waveform[waveformBin]);   	
+	    short min_S = *min_element(SiPM_s_waveform.begin()+100,SiPM_s_waveform.begin()+300);
+	    short min_C = *min_element(SiPM_c_waveform.begin()+100,SiPM_c_waveform.begin()+300);
+	    short minindex_S = min_element(SiPM_s_waveform.begin()+100,SiPM_s_waveform.begin()+300)-SiPM_s_waveform.begin();
+	    short minindex_C = min_element(SiPM_c_waveform.begin()+100,SiPM_c_waveform.begin()+300)-SiPM_c_waveform.begin();
+	    short cut_s = (short)(S_ped[i]-min_S)*0.5;
+	    short cut_c = (short)(C_ped[i]-min_C)*0.5;
+	    int first_s=0;
+	    int first_c=0;
+	    int last_s=0;
+	    int last_c=0;
+	    int flag_s_first = 0;
+	    int flag_c_first = 0;
+	    int flag_s_last = 0;
+	    int flag_c_last = 0;
+	    int bin;
+	    for (bin =0; bin < 200; bin++){
+		if (minindex_S>100 && minindex_S<300){
+		    if (cut_s>S_ped[i]-SiPM_s_waveform[minindex_S-bin]){
+		        if (flag_s_first == 0){ first_s = minindex_S-bin; flag_s_first=1;}
+		    }
+		    if (cut_s>S_ped[i]-SiPM_s_waveform[minindex_S+bin]){
+		        if (flag_s_last == 0){ last_s = minindex_S+bin; flag_s_last=1;}
+		    }
+		}
+		if (minindex_C>100 && minindex_C<300){
+		    if (cut_c>C_ped[i]-SiPM_c_waveform[minindex_C-bin]){
+		        if (flag_c_first == 0){ first_c = minindex_C-bin; flag_c_first=1;}
+		    }
+		    if (cut_c>C_ped[i]-SiPM_c_waveform[minindex_C+bin]){
+		        if (flag_c_last == 0){ last_c = minindex_C+bin; flag_c_last=1;}
+		    }
+		}
   	    }
-	    c->cd();
-	    SiPM_s_hist->Draw("hist"); c->SaveAs(Form("./test/%d_evt_%d_colume_%d_plate_S.png",iEvt,(i/10+1)%2+i%10*2+21,i/10+21));
-	    c->cd();
-	    SiPM_c_hist->Draw("hist"); c->SaveAs(Form("./test/%d_evt_%d_colume_%d_plate_C.png",iEvt,(i/10)%2+i%10*2+21,i/10+21));
-
+	    //std::cout<<first_s<<" | "<<minindex_S<<" | "<<last_s<<std::endl;        
+	   if (min_element(SiPM_s_waveform.begin(),SiPM_s_waveform.end()-23) - SiPM_s_waveform.begin()>100 && min_element(SiPM_s_waveform.begin(),SiPM_s_waveform.end()) - SiPM_s_waveform.begin()<300)FWHM_S[i]->Fill(last_s-first_s);
+	   if (min_element(SiPM_c_waveform.begin(),SiPM_c_waveform.end()-23) - SiPM_c_waveform.begin()>100 && min_element(SiPM_c_waveform.begin(),SiPM_c_waveform.end()) - SiPM_c_waveform.begin()<300)FWHM_C[i]->Fill(last_c-first_c);
+	   //FWHM_S[i]->Fill(last_s-first_s);
+	   //FWHM_C[i]->Fill(last_c-first_c);
+	   flag_s_first=0;
+	   flag_c_first=0;
+	   flag_s_last=0;
+	   flag_c_last=0;
+           first_s = 0;
+           first_c = 0;
+           last_s =0;
+           last_c =0;
 	}
         // Exercise 3 : Get data of M1T1C and M1T1S waveforms
 
@@ -138,4 +186,10 @@ int main(int argc, char** argv) {
 
         printProgress(iEvt + 1, totalEntry);
     }
+    TFile * root_fp = new TFile(Form("FWHM_%d_SiPM_all.root",runNum),"recreate");
+    for (int i=0;i<200;i++){
+        FWHM_S[i]->Write();
+        FWHM_C[i]->Write();
+    }
+    root_fp->Close();
 }

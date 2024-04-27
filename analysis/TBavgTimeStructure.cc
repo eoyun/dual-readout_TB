@@ -52,12 +52,22 @@ int main(int argc, char** argv) {
 
     // Load mapping info
     TButility utility = TButility();
-    utility.loading("/gatbawi/dream/mapping/mapping_Aug2022TB.root");
+    utility.loading("/pnfs/knu.ac.kr/data/cms/store/user/sungwon/2022_DRC_TB_analysis/mapping/mapping_Aug2022TB.root");
     
     // Preparing histograms
-    TH1F* psHist = new TH1F("psAvgTime", "psAvgTime;bin;ADC", 1000, 0, 1000);
-    TH1F* M1T1CHist = new TH1F("M1T1CAvgTime", "M1T1CAvgTime;bin;ADC", 1000, 0, 1000);
-    TH1F* M1T1SHist = new TH1F("M1T1SAvgTime", "M1T1SAvgTime", 1000, 0, 1000);
+    TH1F* psHist = new TH1F("psAvgTime", "psAvgTime;bin;ADC", 1000, 0, 400);
+    TH1F* tcHist = new TH1F("tcAvgTime", "tcAvgTime;bin;ADC", 1000, 0, 400);
+    TH1F* mcHist = new TH1F("mcAvgTime", "mcAvgTime;bin;ADC", 1000, 0, 400);
+    TH1F* dwc1_rHist = new TH1F("DWC1AvgR","",1000,0,400);
+    TH1F* dwc1_lHist = new TH1F("DWC1AvgL","",1000,0,400);
+    TH1F* dwc1_uHist = new TH1F("DWC1AvgU","",1000,0,400);
+    TH1F* dwc1_dHist = new TH1F("DWC1AvgD","",1000,0,400);
+    TH1F* dwc2_rHist = new TH1F("DWC2AvgR","",1000,0,400);
+    TH1F* dwc2_lHist = new TH1F("DWC2AvgL","",1000,0,400);
+    TH1F* dwc2_uHist = new TH1F("DWC2AvgU","",1000,0,400);
+    TH1F* dwc2_dHist = new TH1F("DWC2AvgD","",1000,0,400);
+    TH1F* M1T1CHist = new TH1F("M1T1CAvgTime", "M1T1CAvgTime;bin;ADC", 1000, 0, 400);
+    TH1F* M1T1SHist = new TH1F("M1T1SAvgTime", "M1T1SAvgTime", 1000, 0, 400);
     TH2D* dwc1_correctedPos = new TH2D("dwc1_correctedPos", "dwc1_correctedPos;mm;mm;events", 480, -120., 120., 480, -120., 120.);
     TH2D* dwc2_correctedPos = new TH2D("dwc2_correctedPos", "dwc2_correctedPos;mm;mm;events", 480, -120., 120., 480, -120., 120.);
     TH2D* dwc1_correctedPos_PID = new TH2D("dwc1_correctedPos_PID", "dwc1_correctedPos_PID;mm;mm;events", 480, -120., 120., 480, -120., 120.);
@@ -84,8 +94,10 @@ int main(int argc, char** argv) {
 
     // Exercise 2 : Get pre-shower and module 1 tower 1 C, S channel cid using utility.getcid()
     TBcid pscid = utility.getcid(TBdetector::detid::preshower);
-    TBcid M1T1C_cid = utility.getcid(); // Your answer here
-    TBcid M1T1S_cid = utility.getcid(); // Your answer here
+    TBcid mccid = utility.getcid(TBdetector::detid::muon);
+    TBcid tccid = utility.getcid(TBdetector::detid::tail);
+    TBcid M1T1C_cid = utility.getcid(1,1,true); // Your answer here
+    TBcid M1T1S_cid = utility.getcid(1,1,false); // Your answer here
 
     /*
     When drawing average time structure, we need to remove particles which are likely to miss our module
@@ -102,14 +114,14 @@ int main(int argc, char** argv) {
     */
     
     // Get DWC root file created in previous exercise
-    TFile* dwcFile = TFile::Open(("./dwc/dwc_Run_" + std::to_string(runNum) + ".root").c_str());
+    //TFile* dwcFile = TFile::Open(("./dwc/dwc_Run_" + std::to_string(runNum) + ".root").c_str());
     // Get DWC 1 & 2 2D histograms from DWC root file
-    TH2D* dwc1_pos   = (TH2D*) dwcFile->Get("dwc1_pos");
-    TH2D* dwc2_pos   = (TH2D*) dwcFile->Get("dwc2_pos");
+    //TH2D* dwc1_pos   = (TH2D*) dwcFile->Get("dwc1_pos");
+    //TH2D* dwc2_pos   = (TH2D*) dwcFile->Get("dwc2_pos");
     // getDWCoffset : Function defined in function.cc for calculating DWC center position.
     // Receive dwc 2D histogram and returns offset vector >> vector[0] = DWC X offset, vector[1] = DWC Y offset
-    std::vector<float> dwc1_offset = getDWCoffset(dwc1_pos); // dwc1_offset.at(0) == dwc1 X offset from 0 mm, dwc1_offset.at(1) == dwc1 Y offset from 0 mm
-    std::vector<float> dwc2_offset = getDWCoffset(dwc2_pos);
+    //std::vector<float> dwc1_offset = getDWCoffset(dwc1_pos); // dwc1_offset.at(0) == dwc1 X offset from 0 mm, dwc1_offset.at(1) == dwc1 Y offset from 0 mm
+    //std::vector<float> dwc2_offset = getDWCoffset(dwc2_pos);
 
     // Evt Loop start
     // To draw average time structure, we first stack all waveforms into one waveform histogram
@@ -121,12 +133,16 @@ int main(int argc, char** argv) {
         // Getting TBwaveform data using TBcid, and waveform from TBwaveform
         TBwaveform psData = anEvt->data(pscid);
         std::vector<short> psWaveform = psData.waveform();
+        TBwaveform mcData = anEvt->data(mccid);
+        std::vector<short> mcWaveform = mcData.waveform();
+        TBwaveform tcData = anEvt->data(tccid);
+        std::vector<short> tcWaveform = tcData.waveform();
 
         // Exercise 3 : Get waveform of both Module 1 tower 1 S and C channels
-        TBwaveform M1T1C_data = ; // Your answer here
-        std::vector<short> M1T1C_waveform = ; // Your answer here
-                                ; // Your answer here
-                                            ; // Your answer here
+        TBwaveform M1T1C_data = anEvt->data(M1T1C_cid); // Your answer here
+        std::vector<short> M1T1C_waveform = M1T1C_data.waveform(); // Your answer here
+        TBwaveform M1T1S_data = anEvt->data(M1T1S_cid); // Your answer here
+        std::vector<short> M1T1S_waveform = M1T1S_data.waveform(); // Your answer here
 
         // This part is for getting DWC data -> waveform -> peak timing and applying DWC correlation cut
         std::vector<TBwaveform> dwc1_data;
@@ -153,24 +169,33 @@ int main(int argc, char** argv) {
         for (std::vector<short> waveform : dwc2_waveform) {
             dwc2_peakTime.push_back(getPeakTime(waveform));
         }
-        std::vector<float> dwc1_correctedPosition = getDWC1position(dwc1_peakTime, dwc1_offset.at(0), dwc1_offset.at(1));
-        std::vector<float> dwc2_correctedPosition = getDWC2position(dwc2_peakTime, dwc2_offset.at(0), dwc2_offset.at(1));
-        dwc1_correctedPos->Fill(dwc1_correctedPosition.at(0), dwc1_correctedPosition.at(1));
-        dwc2_correctedPos->Fill(dwc2_correctedPosition.at(0), dwc2_correctedPosition.at(1));
+        //std::vector<float> dwc1_correctedPosition = getDWC1position(dwc1_peakTime, dwc1_offset.at(0), dwc1_offset.at(1));
+        //std::vector<float> dwc2_correctedPosition = getDWC2position(dwc2_peakTime, dwc2_offset.at(0), dwc2_offset.at(1));
+        //dwc1_correctedPos->Fill(dwc1_correctedPosition.at(0), dwc1_correctedPosition.at(1));
+        //dwc2_correctedPos->Fill(dwc2_correctedPosition.at(0), dwc2_correctedPosition.at(1));
         // For DWC correlation cut (1.5mm threshold), use function defined in functions.cc : dwcCorrelationPID()
         // This function calculates the X and Y position difference between the two DWCs, and return true if both differences are smaller than 1.5 (mm)
         // If not passed (== X or Y position difference of DWC 1 and 2 is larger than 1.5 mm), skip event loop
-        if (! dwcCorrelationPID(dwc1_correctedPosition, dwc2_correctedPosition, 1.5f) ) continue;
-        dwc1_correctedPos_PID->Fill(dwc1_correctedPosition.at(0), dwc1_correctedPosition.at(1));
-        dwc2_correctedPos_PID->Fill(dwc2_correctedPosition.at(0), dwc2_correctedPosition.at(1));
+        //if (! dwcCorrelationPID(dwc1_correctedPosition, dwc2_correctedPosition, 1.5f) ) continue;
+        //dwc1_correctedPos_PID->Fill(dwc1_correctedPosition.at(0), dwc1_correctedPosition.at(1));
+        //dwc2_correctedPos_PID->Fill(dwc2_correctedPosition.at(0), dwc2_correctedPosition.at(1));
 
         for (int bin = 0; bin < 1000; bin++) {
             int waveformBin = bin + 1;
             // Pre-shower
-            psHist        ->Fill(bin, psWaveform[waveformBin]);
-            // Exercise 4 : Fill M1T1 C, S histogram with corresponding waveforms
-            M1T1CHist     ->Fill(, ); // Your answer here
-            M1T1SHist     ->Fill(, ); // Your answer here
+            psHist        ->Fill(bin*0.4, psWaveform[waveformBin]);
+            mcHist        ->Fill(bin*0.4, mcWaveform[waveformBin]);
+            tcHist        ->Fill(bin*0.4, tcWaveform[waveformBin]);
+            dwc1_rHist    ->Fill(bin*0.4, dwc1_waveform.at(0)[waveformBin]);
+            dwc1_lHist    ->Fill(bin*0.4, dwc1_waveform.at(1)[waveformBin]);
+            dwc1_uHist    ->Fill(bin*0.4, dwc1_waveform.at(2)[waveformBin]);
+            dwc1_dHist    ->Fill(bin*0.4, dwc1_waveform.at(3)[waveformBin]);
+            dwc2_rHist    ->Fill(bin*0.4, dwc2_waveform.at(0)[waveformBin]);
+            dwc2_lHist    ->Fill(bin*0.4, dwc2_waveform.at(1)[waveformBin]);
+            dwc2_uHist    ->Fill(bin*0.4, dwc2_waveform.at(2)[waveformBin]);
+            dwc2_dHist    ->Fill(bin*0.4, dwc2_waveform.at(3)[waveformBin]);
+            M1T1CHist     ->Fill(bin*0.4, M1T1C_waveform[waveformBin]); // Your answer here
+            M1T1SHist     ->Fill(bin*0.4, M1T1S_waveform[waveformBin]); // Your answer here
         }
     }
 
@@ -184,23 +209,40 @@ int main(int argc, char** argv) {
     outputRoot->cd();
 
     psHist->Scale( scale );
-    psHist->GetYaxis()->SetRangeUser(-100, 4096);
     psHist->Write();
+    tcHist->Scale( scale );
+    tcHist->Write();
+    mcHist->Scale( scale );
+    mcHist->Write();
+    dwc1_rHist->Scale( scale );
+    dwc1_rHist->Write();
+    dwc1_lHist->Scale( scale );
+    dwc1_lHist->Write();
+    dwc1_uHist->Scale( scale );
+    dwc1_uHist->Write();
+    dwc1_dHist->Scale( scale );
+    dwc1_dHist->Write();
+    dwc2_rHist->Scale( scale );
+    dwc2_rHist->Write();
+    dwc2_lHist->Scale( scale );
+    dwc2_lHist->Write();
+    dwc2_uHist->Scale( scale );
+    dwc2_uHist->Write();
+    dwc2_dHist->Scale( scale );
+    dwc2_dHist->Write();
 
     // M1 C
     M1T1CHist->Scale( scale );
-    M1T1CHist->GetYaxis()->SetRangeUser(-100, 4096);
     M1T1CHist->Write();
 
     // M1 S
     M1T1SHist->Scale( scale );
-    M1T1SHist->GetYaxis()->SetRangeUser(-100, 4096);
     M1T1SHist->Write();
 
-    dwc1_correctedPos->Write();
-    dwc2_correctedPos->Write();
-    dwc1_correctedPos_PID->Write();
-    dwc2_correctedPos_PID->Write();
+    //dwc1_correctedPos->Write();
+    //dwc2_correctedPos->Write();
+    //dwc1_correctedPos_PID->Write();
+    //dwc2_correctedPos_PID->Write();
 
     outputRoot->Close();
 }

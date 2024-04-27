@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
 
     // Load mapping info
     TButility utility = TButility();
-    utility.loading("/gatbawi/dream/mapping/mapping_Aug2022TB.root");
+    utility.loading("/pnfs/knu.ac.kr/data/cms/store/user/sungwon/2022_DRC_TB_analysis/mapping/mapping_Aug2022TB.root");
     
     // Get DWC center info (offsets) for DWC correlation cut
     TFile* dwcFile = TFile::Open(("./dwc/dwc_Run_" + std::to_string(runNum) + ".root").c_str());
@@ -88,10 +88,10 @@ int main(int argc, char** argv) {
 
     // Exercise 1 : Get pre-shower cid
     // Get channel IDs
-    TBcid pscid = ; // Your answer here
+    TBcid pscid = utility.getcid(TBdetector::detid::preshower);
 
     // Get pedestals : pedestals are needed to calculate integrated ADC
-    utility.loadped( ("/gatbawi/dream/ped/mean/Run" + std::to_string(runNum) + "_pedestalHist_mean.root").c_str() );
+    utility.loadped( ("/pnfs/knu.ac.kr/data/cms/store/user/sungwon/2022_DRC_TB_analysis/ped/mean/Run" + std::to_string(runNum) + "_pedestalHist_mean.root").c_str() );
     float psPed = utility.retrievePed(pscid);
 
     // Evt Loop
@@ -131,8 +131,8 @@ int main(int argc, char** argv) {
         dwc2_correctedPos->Fill(dwc2_correctedPosition.at(0), dwc2_correctedPosition.at(1));
 
         // Exercise 2 : Using pre-shower cid, get its waveform
-        TBwaveform psData = ; // Your answer here
-        std::vector<short> psWaveform = ; // Your answer here
+        TBwaveform psData = anEvt->data(pscid);
+        std::vector<short> psWaveform = psData.waveform();
 
         // To get integrated ADC, we subtract each pre-shower waveform bin value from pre-shower pedestals, and sum them up
         float psIntADC = 0.f;
@@ -161,7 +161,7 @@ int main(int argc, char** argv) {
     // ----------------------------------------------------------------------------------------------------------------------
     // Using TF1, define gaussian fit function for fitting 1-mip peak of pre-shower detector
     // The range 9000~15000 need to be optimized to give best Chi2/NDF after fitting PS int. ADC
-    TF1* psFitFunc = new TF1("psFitFunc", "gaus", 8000, 18000); // Your answer here, change the range after checking the fit result
+    TF1* psFitFunc = new TF1("psFitFunc", "gaus", 22000, 30000); // Your answer here, change the range after checking the fit result
     
     psIntHist->Write();
     psIntHist_PID->Fit("psFitFunc", "R"); // histogram->Fit("fit function name", "R"); will fit the histogram with corresponding fit function 

@@ -1,6 +1,7 @@
 #include <limits.h>
 
 #include "TBdetector.h"
+TBcid::TBcid() {}
 
 TBcid::TBcid(int midin, int channelin)
 : mid_(midin), channel_(channelin) {}

@@ -6,6 +6,7 @@
 
 class TBcid {
 public:
+  TBcid();
   TBcid(int midin, int channelin);
   ~TBcid() {}
 

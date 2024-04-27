@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
 
     // Load mapping info
     TButility utility = TButility();
-    utility.loading("/gatbawi/dream/mapping/mapping_Aug2022TB.root");
+    utility.loading("/pnfs/knu.ac.kr/data/cms/store/user/sungwon/2022_DRC_TB_analysis/mapping/mapping_Aug2022TB.root");
 
     // Preparing 2D histograms for DWC 1 & 2 position, correlation plots
     TH2D* dwc1_pos = new TH2D("dwc1_pos", "dwc1_pos;mm;mm;events", 480, -120., 120., 480, -120., 120.);
@@ -75,10 +75,10 @@ int main(int argc, char** argv) {
     TBcid dwc1_cid_D = TBcid(1,23); // Down
 
     // Exercise 1 : Referring to mapping info, get channel IDs of DWC 2
-    TBcid dwc2_cid_R = TBcid( , ); // R // Your answer here
-    TBcid dwc2_cid_L = TBcid( , ); // L // Your answer here
-    TBcid dwc2_cid_U = TBcid( , ); // U // Your answer here
-    TBcid dwc2_cid_D = TBcid( , ); // D // Your answer here
+    TBcid dwc2_cid_R = TBcid(1,25); // R // Your answer here
+    TBcid dwc2_cid_L = TBcid(1,27); // L // Your answer here
+    TBcid dwc2_cid_U = TBcid(1,29); // U // Your answer here
+    TBcid dwc2_cid_D = TBcid(1,31); // D // Your answer here
 
     // Start Evt Loop to draw DWC plots
     for (int iEvt = 0; iEvt < totalEntry; iEvt++) {
@@ -91,10 +91,10 @@ int main(int argc, char** argv) {
         TBwaveform dwc1_data_D = anEvt->data(dwc1_cid_D);
         
         // Exercise 2 : Get DWC2 R, L, U, D channels data
-        TBwaveform dwc2_data_R = ; // Your answer here
-        TBwaveform dwc2_data_L = ; // Your answer here
-                               = ; // Your answer here
-                               = ; // Your answer here
+        TBwaveform dwc2_data_R = anEvt->data(dwc2_cid_R); // Your answer here
+        TBwaveform dwc2_data_L = anEvt->data(dwc2_cid_L); // Your answer here
+        TBwaveform dwc2_data_U = anEvt->data(dwc2_cid_U); // Your answer here
+        TBwaveform dwc2_data_D = anEvt->data(dwc2_cid_D); // Your answer here
 
         // Get each DWC1 R, L, U, D channels waveform using data.waveform();
         std::vector<short> dwc1_waveform_R = dwc1_data_R.waveform();
@@ -103,10 +103,10 @@ int main(int argc, char** argv) {
         std::vector<short> dwc1_waveform_D = dwc1_data_D.waveform();
 
         // Exercise 3 : Get DWC2 R, L, U, D channels waveform
-        std::vector<short> dwc2_waveform_R = ; // Your answer here
-        std::vector<short> dwc2_waveform_L = ; // Your answer here
-                                           = ; // Your answer here
-                                           = ; // Your answer here
+        std::vector<short> dwc2_waveform_R = dwc2_data_R.waveform(); // Your answer here
+        std::vector<short> dwc2_waveform_L = dwc2_data_L.waveform(); // Your answer here
+        std::vector<short> dwc2_waveform_U = dwc2_data_U.waveform(); // Your answer here
+        std::vector<short> dwc2_waveform_D = dwc2_data_D.waveform(); // Your answer here
         
         /*
         To get DWC position from its calibration value, one needs to know peak timing of the waveform
@@ -134,10 +134,10 @@ int main(int argc, char** argv) {
         float dwc1_peak_D = getPeakTime(dwc1_waveform_D);
 
         // Exercise 4 : Get DWC2 R, L, U, D peak timing from their waveforms
-        float dwc2_peak_R = getPeakTime(); // Your answer here
-        float dwc2_peak_L =              ; // Your answer here
-                          =              ; // Your answer here
-                          =              ; // Your answer here
+        float dwc2_peak_R = getPeakTime(dwc2_waveform_R); // Your answer here
+        float dwc2_peak_L = getPeakTime(dwc2_waveform_L); // Your answer here
+        float dwc2_peak_U = getPeakTime(dwc2_waveform_U); // Your answer here
+        float dwc2_peak_D = getPeakTime(dwc2_waveform_D); // Your answer here
 
         /*
         To get DWC position from timing value, one need to do as follows (refer to DWC info pdf page 3)
@@ -173,8 +173,8 @@ int main(int argc, char** argv) {
         float dwc2_Vertical_Slope = -0.1741203164;
         float dwc2_Vertical_Offset = -0.278179655;
 
-        float dwc2_x_position = ; // Your answer here
-        float dwc2_y_position = ; // Your answer here
+        float dwc2_x_position = ( (float) (dwc2_peak_R - dwc2_peak_L ) * dwc2_horizontal_Slope) + dwc2_horizontal_Offset; // Your answer here
+        float dwc2_y_position = ( (float) (dwc2_peak_U - dwc2_peak_D ) * dwc2_Vertical_Slope)   + dwc2_Vertical_Offset; // Your answer here
 
 
         // Filling 2D histogram to plot DWC 1 and 2 positions

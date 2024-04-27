@@ -23,7 +23,7 @@ TChain* getNtupleChain(int runNumber) {
     TChain* evtChain = new TChain("events");
     for (int fn = 0; fn < 50; fn++) {
         std::string fileName = "ntuple_Run_" + std::to_string(runNumber) + "_Wave_" + std::to_string(fn) + ".root"; // This is your ntuple name, no need to change it
-        std::string filePath = "/gatbawi/dream/ntuple/waveform/Run_"  + std::to_string(runNumber) + "/" + fileName; // Change to your own ntuple file path here
+        std::string filePath = "/pnfs/knu.ac.kr/data/cms/store/user/sungwon/2022_DRC_TB_ntuple/waveform/Run_"  + std::to_string(runNumber) + "/" + fileName; // Change to your own ntuple file path here
         if ( !access(filePath.c_str(), F_OK) ){
             std::cout << "Ntuple # : " << fn << " added to TChain : " << filePath << std::endl; 
             evtChain->Add(filePath.c_str());

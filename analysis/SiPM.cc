@@ -73,9 +73,14 @@ int main(int argc, char** argv) {
     for (int i =0;i<200;i++){
          SiPM_s[i] = utility.getcid(TBdetector::detid::SiPM,2,5,(i/10+1)%2+i%10*2+21,i/10+21,false);
          SiPM_c[i] = utility.getcid(TBdetector::detid::SiPM,2,5,(i/10)%2+i%10*2+21,i/10+21,true);
-	 std::cout<<(i/10+1)%2+i%10*2+21<<" | "<<i/10+21<<std::endl;
+	 //std::cout<<(i/10+1)%2+i%10*2+21<<" | "<<i/10+21<<std::endl;
     }
-
+    TH2F *SiPM_s_hist[200];
+    TH2F *SiPM_c_hist[200];
+    for (int i=0;i<200;i++){
+	SiPM_s_hist[i] = new TH2F(Form("%d_plate_%d_column_s",(i/10+1)%2+i%10*2+21,i/10+21),"bin;ADC",1000,0,1000,5000,-1000,4000);
+	SiPM_c_hist[i] = new TH2F(Form("%d_plate_%d_column_c",(i/10)%2+i%10*2+21,i/10+21),"bin;ADC",1000,0,1000,5000,-1000,4000);
+    }
     // Starting Evt Loop
     for (int iEvt = 0; iEvt < totalEntry; iEvt++) {
         // Get entry from ntuple TChain
@@ -83,12 +88,12 @@ int main(int argc, char** argv) {
         evtChain->GetEntry(iEvt);
 
         // Here we define histograms to draw waveform plots of pre-shower, module 1 tower 1 ceren. and scint. channel
-        TH1F* psWaveformHist = new TH1F( ( "psWaveform_" + std::to_string(iEvt) ).c_str(), ("psWaveform_" + std::to_string(iEvt) + ";bin;ADC").c_str() , 1000, 0, 1000);
-        psWaveformHist->GetYaxis()->SetRangeUser(-100, 4096);
-	TH1F* SiPM_s_hist = new TH1F ("",";bin;ADC",1000,0,1000);
-	SiPM_s_hist->GetYaxis()->SetRangeUser(3000,4000);
-	TH1F* SiPM_c_hist = new TH1F ("",";bin;ADC",1000,0,1000);
-	SiPM_c_hist->GetYaxis()->SetRangeUser(3000,4000);
+        //TH1F* psWaveformHist = new TH1F( ( "psWaveform_" + std::to_string(iEvt) ).c_str(), ("psWaveform_" + std::to_string(iEvt) + ";bin;ADC").c_str() , 1000, 0, 1000);
+        //psWaveformHist->GetYaxis()->SetRangeUser(-100, 4096);
+	//TH1F* SiPM_s_hist = new TH1F ("",";bin;ADC",1000,0,1000);
+	//SiPM_s_hist->GetYaxis()->SetRangeUser(3000,4000);
+	//TH1F* SiPM_c_hist = new TH1F ("",";bin;ADC",1000,0,1000);
+	//SiPM_c_hist->GetYaxis()->SetRangeUser(3000,4000);
         // To get data (TBwaveform class object) from event, one cat use data(TBcid cid) function of TBevt class
         // anEvt->data(TBcid cid) will return TBwaveform class object of corresponding channel ID
         // For example, to get TBwaveform data of pre-shower detector, one cat do :
@@ -111,19 +116,22 @@ int main(int argc, char** argv) {
 	for (int i=0;i<200;i++){
 	    SiPM_s_waveform.clear();
 	    SiPM_c_waveform.clear();
-    	    SiPM_s_hist->Reset();
-    	    SiPM_c_hist->Reset();
+    	    //SiPM_s_hist->Reset();
+    	    //SiPM_c_hist->Reset();
+    	    //std::cout<<"hello"<<std::endl;
+    	    double ped_s=0.;
+    	    double ped_c=0.;
 	    SiPM_s_waveform = SiPM_s_data[i].waveform();
     	    SiPM_c_waveform = SiPM_c_data[i].waveform();
+    	    for (int bin=1;bin<101;bin++){
+		ped_s+=(double)SiPM_s_waveform[bin+1]/100.;
+		ped_c+=(double)SiPM_c_waveform[bin+1]/100.;
+	    }
 	    for (int bin =0; bin < 1000; bin++){
             	int waveformBin = bin + 1; // To loop over waveform[1] ~ waveform[1000]
-	 	SiPM_s_hist->Fill(bin,SiPM_s_waveform[waveformBin]);   	
-	 	SiPM_c_hist->Fill(bin,SiPM_c_waveform[waveformBin]);   	
+	 	SiPM_s_hist[i]->Fill(bin,ped_s-SiPM_s_waveform[waveformBin]);   	
+	 	SiPM_c_hist[i]->Fill(bin,ped_c-SiPM_c_waveform[waveformBin]);   	
   	    }
-	    c->cd();
-	    SiPM_s_hist->Draw("hist"); c->SaveAs(Form("./test/%d_evt_%d_colume_%d_plate_S.png",iEvt,(i/10+1)%2+i%10*2+21,i/10+21));
-	    c->cd();
-	    SiPM_c_hist->Draw("hist"); c->SaveAs(Form("./test/%d_evt_%d_colume_%d_plate_C.png",iEvt,(i/10)%2+i%10*2+21,i/10+21));
 
 	}
         // Exercise 3 : Get data of M1T1C and M1T1S waveforms
@@ -138,4 +146,10 @@ int main(int argc, char** argv) {
 
         printProgress(iEvt + 1, totalEntry);
     }
+    TFile * root_fp = new TFile(Form("%d_SiPm.root",runNum),"recreate");
+    for (int i=0;i<200;i++){
+        SiPM_s_hist[i]->Write();
+        SiPM_c_hist[i]->Write();
+    }
+    root_fp->Close();
 }
